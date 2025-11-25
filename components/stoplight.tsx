@@ -1,10 +1,9 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Flex,
-  Heading,
   Text,
   VStack,
 } from '@chakra-ui/react';
@@ -21,25 +20,6 @@ const LIGHT_SEQUENCE: LightConfig[] = [
   { color: 'yellow', duration: 1000 },
   { color: 'red', duration: 2000 }
 ];
-
-// Calculate which light should be active based on elapsed time and sequence
-function calculateCurrentState(sequence: LightConfig[], elapsedTime: number): { index: number; color: LightColor } {
-
-  
-  // Calculate position in the repeating cycle
-  const cycleDuration = sequence.reduce((sum, light) => sum + light.duration, 0);
-  const positionInCycle = elapsedTime % cycleDuration;
-  
-  // Find which light should be active based on accumulated durations
-  let accumulatedTime = 0;
-  for (let i = 0; i < sequence.length; i++) {
-    accumulatedTime += sequence[i].duration;
-    if (positionInCycle < accumulatedTime) {
-      return { index: i, color: sequence[i].color };
-    }
-  }
-  return { index: 0, color: sequence[0].color };
-}
 
 const getLightColors = (color: LightColor, isActive: boolean) => {
   const colors = {
@@ -93,22 +73,17 @@ function Light({ color, isActive, label }: LightProps) {
 
 export default function Stoplight({ 
 }) {
-  const mountTimeRef = useRef<number>(Date.now());
-  const [currentState, setCurrentState] = useState(() => {
-    return { index: 0, color: LIGHT_SEQUENCE[0].color };
-  });
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      const now = Date.now();
-      const elapsed = now - mountTimeRef.current;
-      const newState = calculateCurrentState(LIGHT_SEQUENCE, elapsed);
-      
-      setCurrentState(newState);
-    }, 50);
+    const currentLight = LIGHT_SEQUENCE[currentIndex];
+    
+    const timeout = setTimeout(() => {
+      setCurrentIndex((prev) => (prev + 1) % LIGHT_SEQUENCE.length);
+    }, currentLight.duration);
 
-    return () => clearInterval(interval);
-  });
+    return () => clearTimeout(timeout);
+  }, [currentIndex]);
 
   const displayOrder: LightColor[] = ['red', 'yellow', 'green'];
 
@@ -126,7 +101,7 @@ export default function Stoplight({
         <VStack gap={4}>
           {displayOrder.map((color) => {
             const sequenceIndex = LIGHT_SEQUENCE.findIndex(l => l.color === color);
-            const isActive = sequenceIndex !== -1 && currentState.index === sequenceIndex;
+            const isActive = sequenceIndex !== -1 && currentIndex === sequenceIndex;
             
             return (
               <Light 
